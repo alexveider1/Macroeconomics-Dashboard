@@ -1,17 +1,18 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import requests
-from bs4 import BeautifulSoup
-import lxml
-import ollama
-import pycountry
-from time import sleep
-import tqdm
+import argparse
 import logging
 import json
 import os
 from io import StringIO
+from time import sleep
+
+import requests
+import lxml
+from bs4 import BeautifulSoup
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
 import psycopg2
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
@@ -23,6 +24,7 @@ import plotly.io as pio
 import plotly.express as px
 
 from wordcloud import WordCloud
+import pycountry
 
 
 

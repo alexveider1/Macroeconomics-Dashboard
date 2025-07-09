@@ -2,7 +2,6 @@ import argparse
 import logging
 import json
 import os
-import tqdm
 from io import StringIO
 from time import sleep
 
@@ -33,6 +32,7 @@ import plotly.io as pio
 import plotly.express as px
 
 from wordcloud import WordCloud
+import pycountry
 
 
 def init()->tuple:
