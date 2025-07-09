@@ -1,0 +1,10 @@
+{
+    "PRELOAD_DATA": false,
+    "USE_POSTGRES": false,
+    "POSTGRES_USERNAME": null,
+    "POSTGRES_PASSWORD": null,
+    "POSTGRES_PORT": null,
+    "USE_OLLAMA": false,
+    "OLLAMA_MODEL": null,
+    "WEB_UI_PORT": "0088"
+}
