@@ -48,5 +48,5 @@ Application has a lot of params for more flexible configuration. For setting par
 
 For example, 
 ```bash 
-python app.py --use_postgres true --postgre_username postgres --postgres_password your_password --postgre_port 5432 --use_ollama true --ollama_model llama3.2:1b
+python app.py --use_postgres true --postgres_username your_username --postgres_password your_password --postgres_port 5432 --use_ollama true --ollama_model llama3.2:1b
 ```
