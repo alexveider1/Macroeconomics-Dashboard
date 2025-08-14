@@ -2,7 +2,7 @@ import argparse
 import logging
 import json
 import os
-from io import StringIO
+from io import StringIO, BytesIO
 from time import sleep
 
 import requests
@@ -26,7 +26,7 @@ from _funcs import ollama_world, ollama_word_cloud, ollama_country
 from _funcs import web_app
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Input, Output
+from dash import Dash, html, dash_table, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.io as pio
 import plotly.express as px

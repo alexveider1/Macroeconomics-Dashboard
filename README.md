@@ -1,6 +1,6 @@
 # Macroeconomics dashboard
 
-`Macroeconomics dashboard` is a python-based web application that downloads, processes and visualizes main macroeconomics indicators. The data is downloaded from [World Bank](https://data.worldbank.org/) and [Organisation for Economic Co-operation and Development (OECD)](https://data-explorer.oecd.org/) via API. Downloaded data may be stored both in common `csv` files and in `PostgreSQL` database. Macroeconomics indicators are shown in the form of lineplots, histograms, maps, etc in the dashboard. Moreover, dashboard provides opportunity to use local `LLM` (via [Ollama](https://github.com/ollama/ollama)) for generating textual description of the current statement of global economy.
+`Macroeconomics dashboard` is a python-based web application that downloads, processes and visualizes main macroeconomics indicators. The data is downloaded from [World Bank](https://data.worldbank.org/) and [Organisation for Economic Co-operation and Development (OECD)](https://data-explorer.oecd.org/) via API. Downloaded data may be stored both in common `csv` files and in `PostgreSQL` database. Macroeconomics indicators are shown in the form of lineplots, histograms, maps, etc in the dashboard. Moreover, dashboard provides opportunity to use local `LLM` (via [Ollama](https://github.com/ollama/ollama)) for generating textual description of the current statement of global economy. Furthermore, plots may be saved in popular formats (`png`, `jpeg`, `pdf`, etc). 
 
 ## Illustrations
 

@@ -2,7 +2,7 @@ import argparse
 import logging
 import json
 import os
-from io import StringIO
+from io import StringIO, BytesIO
 from time import sleep
 
 import requests
@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Input, Output
+from dash import Dash, html, dash_table, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.io as pio
 import plotly.express as px
@@ -172,11 +172,12 @@ def oecd_parser(data_url: str, meta_url: str) -> (pd.DataFrame, dict):
 def get_country_flag(country: str) -> str:
     """Downloads the flag of country via `restcounties` api and returns path of the downloaded flag image"""
     flag_path = os.path.join("assets", f"{country}.png")
+    logging.info("Checking if flag was downloaded")
     if os.path.isfile(flag_path):
         logging.info("Flag was already downloaded")
         return flag_path
     else:
-        logging.info("Start downloading flag")
+        logging.info("Flag was not downloaded. Start downloading flag")
         r = requests.get(f"https://restcountries.com/v3.1/name/{country}")
         if r.status_code == 200:
             flag_url = r.json()[0]["flags"]["png"]
@@ -576,36 +577,33 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
             suffixes=["_x", "_y"],
         ).dropna()
 
-    data_dict = {
-        i: j
-        for i, j in zip(
-            METADATA.keys(),
-            [
-                df_gdp,
-                df_gdp_change,
-                df_gdp_pc,
-                df_gdp_pc_change,
-                df_gni,
-                df_gni_change,
-                df_gni_pc,
-                df_gni_pc_change,
-                df_inflation,
-                df_real_rate,
-                df_population,
-                df_population_change,
-                df_unemployment,
-                df_government_budget_balance,
-                df_export_gdp,
-                df_import_gdp,
-                df_literacy,
-                df_gini,
-                df_gross_debt_gdp,
-                df_labour_participation_rate,
-                df_gdp_on_rd,
-                df_gdp_on_health,
-            ],
-        )
-    }
+    datasets_names = list(map(lambda x: x.strip("MD "), METADATA.keys()))
+    datasets = [
+        df_gdp,
+        df_gdp_change,
+        df_gdp_pc,
+        df_gdp_pc_change,
+        df_gni,
+        df_gni_change,
+        df_gni_pc,
+        df_gni_pc_change,
+        df_inflation,
+        df_real_rate,
+        df_population,
+        df_population_change,
+        df_unemployment,
+        df_government_budget_balance,
+        df_export_gdp,
+        df_import_gdp,
+        df_literacy,
+        df_gini,
+        df_gross_debt_gdp,
+        df_labour_participation_rate,
+        df_gdp_on_rd,
+        df_gdp_on_health,
+    ]
+    countries = df_gdp["country"].sort_values().unique()
+    data_dict = {i: j for i, j in zip(datasets_names, datasets)}
     country_list = df_gdp["country"].sort_values().unique()
     pio.templates.default = "plotly_dark"
     app = Dash(
@@ -902,7 +900,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
                     ),
                 ]
             ),
-            text_box("Country economic overview", center="center"),
+            text_box("Country economics overview", center="center"),
             html.Div(
                 dcc.Dropdown(
                     id="dropdown-selector",
@@ -977,6 +975,44 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
             ),
             html.Div(dcc.Graph(id="gini-graph"), style=STYLE),
             html.Div(dcc.Graph(id="gdp_on_health-graph"), style=STYLE),
+            text_box("Download Macroeconomics data", center="center"),
+            html.Div(
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="metric-dropdown",
+                                options=datasets_names,
+                                value="GDP",
+                                clearable=False,
+                            )
+                        ),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="country-dropdown",
+                                options=countries,
+                                value="United States",
+                                clearable=False,
+                            )
+                        ),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="format-dropdown",
+                                options=["png", "jpeg", "pdf", "svg", "html"],
+                                value="png",
+                                clearable=False,
+                            )
+                        ),
+                    ]
+                ),
+                style=STYLE,
+            ),
+            html.Div(
+                html.Button("Generate and save plot", id="download_button", n_clicks=0),
+                style=STYLE | {"textAlign": "center"},
+            ),
+            html.Div(dcc.Graph(id="download-graph"), style=STYLE),
+            dcc.Download(id="download-plot"),
         ]
     )
 
@@ -1127,5 +1163,70 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
             )
             fig.update_traces(marker_line_width=1, marker_line_color="white")
             return fig
+
+    @app.callback(
+        Output("download-graph", "figure"),
+        Input("metric-dropdown", "value"),
+        Input("country-dropdown", "value"),
+    )
+    def update_graph_before_saving(
+        selected_metric: str, selected_country: str
+    ) -> Figure:
+        """Function for generating graph before downloading"""
+        df = data_dict[selected_metric]
+        fig = generate_lineplot(
+            df, f"Graph with {selected_metric} of {selected_country}", selected_country
+        )
+        return fig
+
+    @app.callback(
+        Output("download-plot", "data"),
+        Input("download_button", "n_clicks"),
+        State("metric-dropdown", "value"),
+        State("country-dropdown", "value"),
+        State("format-dropdown", "value"),
+        prevent_initial_call=True,
+    )
+    def save_graph(
+        n_clicks: int, selected_metric: str, selected_country: str, output_format: str
+    ) -> "File":
+        """Downloads the plot for selected country with selected metric in the preferred format"""
+        if n_clicks > 0:
+            logging.info("Start downloading plot")
+            df = data_dict[selected_metric]
+            filtered_df = df[df["country"] == selected_country]
+            buf = BytesIO()
+
+            if output_format != "html":
+                plt.style.use("dark_background")
+                fig = plt.figure(figsize=(12, 5))
+                x_axis = filtered_df["year"]
+                y_axis = filtered_df[filtered_df.columns[-1]]
+                ax = fig.add_subplot(111)
+                ax.grid(True, alpha=0.5)
+                ax.plot(x_axis, y_axis, color="blue", marker=".")
+                ax.set_title(f"{selected_metric} of {selected_country}", fontsize=14)
+                ax.set_xlabel("Year", fontsize=12)
+                ax.set_ylabel(f"{selected_metric}", fontsize=12)
+                fig.savefig(buf, format=output_format, bbox_inches="tight")
+                plt.close(fig)
+                buf.seek(0)
+                logging.info("Successfully downloaded plot")
+                return dcc.send_bytes(
+                    buf.getvalue(),
+                    filename=f"{selected_country} - {selected_metric}.{output_format}",
+                )
+
+            elif output_format == "html":
+                fig = generate_lineplot(
+                    df, f"{selected_metric} of {selected_country}", selected_country
+                )
+                buf.write(fig.to_html(buf).encode("utf-8"))
+                buf.seek(0)
+                logging.info("Successfully downloaded plot")
+                return dcc.send_bytes(
+                    buf.getvalue(),
+                    filename=f"{selected_country} - {selected_metric}.{output_format}",
+                )
 
     app.run(port=port)
