@@ -577,7 +577,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
             suffixes=["_x", "_y"],
         ).dropna()
 
-    datasets_names = list(map(lambda x: x.strip("MD "), METADATA.keys()))
+    datasets_names = list(map(lambda x: x.lstrip("MD "), METADATA.keys()))
     datasets = [
         df_gdp,
         df_gdp_change,
@@ -627,7 +627,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
                 ),
                 style=STYLE,
             ),
-            html.Div(dash_table.DataTable(id="data-table", page_size=20), style=STYLE),
+            html.Div(dash_table.DataTable(id="data-table", page_size=10), style=STYLE),
             (
                 dbc.Row(
                     [
