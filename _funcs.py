@@ -55,6 +55,8 @@ def change_unit_measure_name(unit_measure: str) -> str:
         "PT": "Percent",
         "0_TO_100": "Gini Index",
         "PA": "Real Interest Rate",
+        "10P3PS": "Born per 1,000 people",
+        "YR": "Years",
     }
     if unit_measure in MEASURE_UNITS:
         return MEASURE_UNITS[unit_measure]
@@ -512,7 +514,8 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         df_inflation = postgres_read_data('"MD INFLATION"', *args)
         df_real_rate = postgres_read_data('"MD REAL_RATE"', *args)
         df_population = postgres_read_data('"MD POPULATION"', *args)
-        df_population_change = postgres_read_data('"MD POPULATION_CHANGE"', *args)
+        df_population_change = (postgres_read_data('"MD POPULATION_CHANGE"', *args),)
+        df_birth_rate = postgres_read_data('"MD BIRTH_RATE"', *args)
         df_unemployment = postgres_read_data('"MD UNEMPLOYMENT"', *args)
         df_government_budget_balance = postgres_read_data(
             '"MD GOVERNMENT_BUDGET_BALANCE"', *args
@@ -527,6 +530,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         )
         df_gdp_on_rd = postgres_read_data('"MD GDP_PERCENT_ON_RD"', *args)
         df_gdp_on_health = postgres_read_data('"MD GDP_PERCENT_ON_HEALTH"', *args)
+        df_expected_lifetime = postgres_read_data('"MD EXPECTED_LIFETIME"', *args)
         df_phillips = pd.merge(
             df_unemployment, df_inflation, on=("country", "year"), how="outer"
         ).dropna()
@@ -539,7 +543,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         ).dropna()
 
     elif not CONFIG["USE_POSTGRES"]:
-        args = ["data"]
+        args = ("data",)
         df_gdp = csv_read_data("MD GDP", *args)
         df_gdp_change = csv_read_data("MD GDP_CHANGE", *args)
         df_gdp_pc = csv_read_data("MD GDP_PER_CAPITA", *args)
@@ -552,6 +556,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         df_real_rate = csv_read_data("MD REAL_RATE", *args)
         df_population = csv_read_data("MD POPULATION", *args)
         df_population_change = csv_read_data("MD POPULATION_CHANGE", *args)
+        df_birth_rate = csv_read_data("MD BIRTH_RATE", *args)
         df_unemployment = csv_read_data("MD UNEMPLOYMENT", *args)
         df_government_budget_balance = csv_read_data(
             "MD GOVERNMENT_BUDGET_BALANCE", *args
@@ -566,6 +571,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         )
         df_gdp_on_rd = csv_read_data("MD GDP_PERCENT_ON_RD", *args)
         df_gdp_on_health = csv_read_data("MD GDP_PERCENT_ON_HEALTH", *args)
+        df_expected_lifetime = csv_read_data("MD EXPECTED_LIFETIME", *args)
         df_phillips = pd.merge(
             df_unemployment, df_inflation, on=("country", "year"), how="outer"
         ).dropna()
@@ -591,6 +597,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         df_real_rate,
         df_population,
         df_population_change,
+        df_birth_rate,
         df_unemployment,
         df_government_budget_balance,
         df_export_gdp,
@@ -599,6 +606,7 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         df_gini,
         df_gross_debt_gdp,
         df_labour_participation_rate,
+        df_expected_lifetime,
         df_gdp_on_rd,
         df_gdp_on_health,
     ]
@@ -762,6 +770,14 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
                     ),
                 ]
             ),
+            html.Div(
+                graph_box(
+                    generate_map(
+                        df_birth_rate, METADATA["MD BIRTH_RATE"]["official_name"]
+                    ),
+                    METADATA["MD BIRTH_RATE"]["description"],
+                )
+            ),
             dbc.Row(
                 [
                     dbc.Col(
@@ -898,7 +914,16 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
                             METADATA["MD GDP_PERCENT_ON_HEALTH"]["description"],
                         )
                     ),
-                ]
+                ],
+            ),
+            html.Div(
+                graph_box(
+                    generate_map(
+                        df_expected_lifetime,
+                        METADATA["MD EXPECTED_LIFETIME"]["official_name"],
+                    ),
+                    METADATA["MD EXPECTED_LIFETIME"]["description"],
+                )
             ),
             text_box("Country economics overview", center="center"),
             html.Div(
@@ -948,6 +973,14 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
                 [
                     dbc.Col(html.Div(dcc.Graph(id="inflation-graph"), style=STYLE)),
                     dbc.Col(html.Div(dcc.Graph(id="real_rate-graph"), style=STYLE)),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(html.Div(dcc.Graph(id="birth_rate-graph"), style=STYLE)),
+                    dbc.Col(
+                        html.Div(dcc.Graph(id="expected_lifetime-graph"), style=STYLE)
+                    ),
                 ]
             ),
             dbc.Row(
@@ -1041,6 +1074,8 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         Output("gni-graph", "figure"),
         Output("gni_pc-graph", "figure"),
         Output("population-graph", "figure"),
+        Output("birth_rate-graph", "figure"),
+        Output("expected_lifetime-graph", "figure"),
         Output("inflation-graph", "figure"),
         Output("real_rate-graph", "figure"),
         Output("unemployment-graph", "figure"),
@@ -1068,6 +1103,14 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
         )
         fig_population = generate_lineplot(
             df_population, METADATA["MD POPULATION"]["official_name"], selected_country
+        )
+        fig_birth_rate = generate_lineplot(
+            df_birth_rate, METADATA["MD BIRTH_RATE"]["official_name"], selected_country
+        )
+        fig_expected_lifetime = generate_lineplot(
+            df_expected_lifetime,
+            METADATA["MD EXPECTED_LIFETIME"]["official_name"],
+            selected_country,
         )
         fig_inflation = generate_lineplot(
             df_inflation, METADATA["MD INFLATION"]["official_name"], selected_country
@@ -1119,6 +1162,8 @@ def web_app(CONFIG: dict, METADATA: dict, port: int) -> None:
             fig_gni,
             fig_gni_pc,
             fig_population,
+            fig_birth_rate,
+            fig_expected_lifetime,
             fig_inflation,
             fig_real_rate,
             fig_unemployment,
